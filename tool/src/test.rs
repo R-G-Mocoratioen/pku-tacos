@@ -199,6 +199,7 @@ fn check(case: &str, output: Wait, record: &mut Record) {
     };
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
+        println!("{}", stdout);
         // let stderr = String::from_utf8_lossy(&output.stderr);
         if let Some(()) = stdout
             .lines()

@@ -41,6 +41,10 @@ pub fn timer_ticks() -> i64 {
 pub fn tick() {
     TICKS.fetch_add(1, SeqCst);
     next();
+    kprintln!(
+        "increase tick to {}",
+        TICKS.load(core::sync::atomic::Ordering::SeqCst)
+    );
 }
 
 /// Returns how many timer ticks elapsed since "then", which should be a

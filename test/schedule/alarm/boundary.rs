@@ -2,7 +2,7 @@ use super::*;
 
 fn single(ticks: i64) {
     let current = timer::timer_ticks();
-
+    // kprintln!("single test"); // 是不是其实没有调用！
     thread::sleep(ticks);
     assert_eq!(current, timer::timer_ticks());
 }

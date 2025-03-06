@@ -83,7 +83,9 @@ pub fn sleep(ticks: i64) {
 
     let start = timer_ticks();
 
+    kprintln!("I need to sleep for {} ticks", ticks); // 这个应该会输出了吧
     while timer_elapsed(start) < ticks {
         schedule();
     }
+    kprintln!("I have successfully sleeped for {} ticks", ticks);
 }
