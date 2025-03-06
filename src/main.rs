@@ -116,11 +116,27 @@ pub extern "C" fn main(hart_id: usize, dtb: usize) -> ! {
 
     #[cfg(feature = "shell")]
     {
-        // TODO: Lab 0
+        // DOING: Lab 0
+        loop {
+            use alloc::string::String;
+            let mut str = String::new();
+            kprint!("PKUOS> ");
+            loop {
+                let mut ch: char = char::from_u32(sbi::console_getchar() as u32).unwrap();
+                if ch == '\n' {
+                    break;
+                }
+                str.push(ch);
+            }
+            if str == "whoami" {
+                kprintln!("2300013067 Luo Siyuan");
+            } else if str == "exit" {
+                break;
+            }
+        }
     }
 
     DISKFS.unmount();
-
     kprintln!("Goodbye, World!");
 
     sbi::reset(
