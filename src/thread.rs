@@ -77,8 +77,8 @@ pub fn get_priority() -> u32 {
     0
 }
 
-use crate::sync::Semaphore;
-static SLEEP_SEM: Semaphore = Semaphore::new(1);
+// use crate::sync::Semaphore;
+// static SLEEP_SEM: Semaphore = Semaphore::new(1);
 
 /// (Lab1) Make the current thread sleep for the given ticks.
 pub fn sleep(ticks: i64) {
@@ -89,20 +89,23 @@ pub fn sleep(ticks: i64) {
     if ticks <= 0 {
         return;
     }
-    SLEEP_SEM.down();
+    // SLEEP_SEM.down();
     use crate::sbi::timer::{new_sleep_sem, timer_ticks};
 
     let start = timer_ticks();
-    let sem = new_sleep_sem(myid, start + ticks);
-    SLEEP_SEM.up();
-    //(*sem).down();
-    while crate::sbi::timer::timer_elapsed(start) < ticks {
-        schedule();
-    }
-    kprintln!(
-        "I ({}) have successfully sleeped for {} ticks and my semaphore has value {}",
-        myid,
-        ticks,
-        (*sem).value()
-    );
+    // let sem = new_sleep_sem(myid, start + ticks);
+    // SLEEP_SEM.up();
+    // //(*sem).down();
+    // while crate::sbi::timer::timer_elapsed(start) < ticks {
+    //     schedule();
+    // }
+    // kprintln!(
+    //     "I ({}) have successfully sleeped for {} ticks and my semaphore has value {}",
+    //     myid,
+    //     ticks,
+    //     (*sem).value()
+    // );
+    new_sleep_sem(&current, start + ticks);
+    block();
+    kprintln!("I ({}) have successfully sleeped for {} ticks", myid, ticks);
 }

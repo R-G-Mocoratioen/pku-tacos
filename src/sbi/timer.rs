@@ -37,15 +37,26 @@ pub fn timer_ticks() -> i64 {
     TICKS.load(SeqCst)
 }
 
-use crate::sync::Semaphore;
+// use crate::sync::Semaphore;
 
-static mut SLEEP: alloc::vec::Vec<(isize, i64, Semaphore)> = alloc::vec::Vec::new();
+// static mut SLEEP: alloc::vec::Vec<(isize, i64, Semaphore)> = alloc::vec::Vec::new();
+
+// /// Declares a new semaphore for a waiting thread.
+// pub fn new_sleep_sem(tid: isize, wakeup: i64) -> &'static Semaphore {
+//     unsafe {
+//         SLEEP.push((tid, wakeup, Semaphore::new(0)));
+//         &SLEEP.last().unwrap().2
+//     }
+// }
+use alloc::sync::Arc;
+use thread::{wake_up, Thread};
+
+static mut SLEEP: alloc::vec::Vec<(&Arc<Thread>, i64)> = alloc::vec::Vec::new();
 
 /// Declares a new semaphore for a waiting thread.
-pub fn new_sleep_sem(tid: isize, wakeup: i64) -> &'static Semaphore {
+pub fn new_sleep_sem(me: &Arc<Thread>, wakeup: i64) {
     unsafe {
-        SLEEP.push((tid, wakeup, Semaphore::new(0)));
-        &SLEEP.last().unwrap().2
+        SLEEP.push((me, wakeup));
     }
 }
 
@@ -59,9 +70,10 @@ pub fn tick() {
     unsafe {
         SLEEP.retain(|x| {
             if x.1 == curtick {
-                kprintln!("thread {} needs to be waken up", x.0);
-                x.2.up();
-                kprintln!("this semaphore has value {}", x.2.value());
+                kprintln!("thread {} needs to be waken up", (*(*(x.0))).id());
+                wake_up(*(x.0));
+                // x.2.up();
+                // kprintln!("this semaphore has value {}", x.2.value());
                 false
             } else {
                 true
