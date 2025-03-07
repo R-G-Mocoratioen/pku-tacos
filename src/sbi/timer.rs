@@ -51,10 +51,10 @@ pub fn timer_ticks() -> i64 {
 use alloc::sync::Arc;
 use thread::{wake_up, Thread};
 
-static mut SLEEP: alloc::vec::Vec<(&Arc<Thread>, i64)> = alloc::vec::Vec::new();
+static mut SLEEP: alloc::vec::Vec<(Arc<Thread>, i64)> = alloc::vec::Vec::new();
 
 /// Declares a new semaphore for a waiting thread.
-pub fn new_sleep_sem(me: &Arc<Thread>, wakeup: i64) {
+pub fn new_sleep_sem(me: Arc<Thread>, wakeup: i64) {
     unsafe {
         SLEEP.push((me, wakeup));
     }
@@ -70,8 +70,8 @@ pub fn tick() {
     unsafe {
         SLEEP.retain(|x| {
             if x.1 == curtick {
-                kprintln!("thread {} needs to be waken up", (*(*(x.0))).id());
-                wake_up(*(x.0));
+                kprintln!("thread {} needs to be waken up", (*(x.0)).id());
+                wake_up(alloc::sync::Arc::clone(&(x.0)));
                 // x.2.up();
                 // kprintln!("this semaphore has value {}", x.2.value());
                 false

@@ -105,7 +105,7 @@ pub fn sleep(ticks: i64) {
     //     ticks,
     //     (*sem).value()
     // );
-    new_sleep_sem(&current, start + ticks);
+    new_sleep_sem(alloc::sync::Arc::clone(&current), start + ticks);
     block();
     kprintln!("I ({}) have successfully sleeped for {} ticks", myid, ticks);
 }
