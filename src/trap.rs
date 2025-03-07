@@ -71,6 +71,10 @@ pub extern "C" fn trap_handler(frame: &mut Frame) {
         Interrupt(SupervisorTimer) => {
             sbi::timer::tick();
             unsafe { riscv::register::sstatus::set_sie() };
+
+            // 先检查一下 sleeping 的线程
+            let curtick = sbi::timer::timer_ticks();
+            thread::Manager::get().wakeup(curtick);
             thread::schedule();
         }
 

@@ -10,7 +10,8 @@ use crate::mem::KernelPgTable;
 use crate::sbi::interrupt;
 use crate::sync::Lazy;
 use crate::thread::{
-    schedule, switch, Builder, Mutex, Schedule, Scheduler, Status, Thread, MAGIC, PRI_DEFAULT, PRI_MIN
+    schedule, switch, Builder, Mutex, Schedule, Scheduler, Status, Thread, MAGIC, PRI_DEFAULT,
+    PRI_MIN,
 };
 
 /* --------------------------------- MANAGER -------------------------------- */
@@ -22,13 +23,22 @@ pub struct Manager {
     pub current: Mutex<Arc<Thread>>,
     /// All alive and not yet destroyed threads
     all: Mutex<Vec<Arc<Thread>>>,
+    /// Threads that are sleeping
+    sleep: Mutex<Vec<(Arc<Thread>, i64)>>,
 }
 
 impl Manager {
     pub fn get() -> &'static Self {
         static TMANAGER: Lazy<Manager> = Lazy::new(|| {
             // Manully create initial thread.
-            let initial = Arc::new(Thread::new("Initial", bootstack as usize, PRI_DEFAULT, 0, None, None));
+            let initial = Arc::new(Thread::new(
+                "Initial",
+                bootstack as usize,
+                PRI_DEFAULT,
+                0,
+                None,
+                None,
+            ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };
             initial.set_status(Status::Running);
 
@@ -36,6 +46,7 @@ impl Manager {
                 scheduler: Mutex::new(Scheduler::default()),
                 all: Mutex::new(Vec::from([initial.clone()])),
                 current: Mutex::new(initial),
+                sleep: Mutex::new(Vec::new()),
             };
 
             let idle = Builder::new(|| loop {
@@ -50,6 +61,22 @@ impl Manager {
         });
 
         &TMANAGER
+    }
+
+    pub fn new_sleep(&self, thread: Arc<Thread>, wakeup: i64) {
+        self.sleep.lock().push((thread.clone(), wakeup));
+    }
+
+    pub fn wakeup(&self, curtick: i64) {
+        self.sleep.lock().retain(|x| {
+            if x.1 <= curtick {
+                use thread::wake_up;
+                wake_up(x.0.clone());
+                false
+            } else {
+                true
+            }
+        });
     }
 
     pub(super) fn register(&self, thread: Arc<Thread>) {
@@ -80,7 +107,10 @@ impl Manager {
             self.current.lock().status() == Status::Running || next.is_some(),
             "no thread is ready"
         );
-        assert!(!self.current.lock().overflow(), "Current thread has overflowed its stack.");
+        assert!(
+            !self.current.lock().overflow(),
+            "Current thread has overflowed its stack."
+        );
 
         if let Some(next) = next {
             assert_eq!(next.status(), Status::Ready);

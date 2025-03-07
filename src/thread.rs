@@ -77,20 +77,15 @@ pub fn get_priority() -> u32 {
     0
 }
 
-use crate::sync::Semaphore;
-pub static SLEEP_SEM: Semaphore = Semaphore::new(1);
-
 /// (Lab1) Make the current thread sleep for the given ticks.
 pub fn sleep(ticks: i64) {
     let current: Arc<Thread> = current();
     if ticks <= 0 {
         return;
     }
-    SLEEP_SEM.down();
-    use crate::sbi::timer::{new_sleep_sem, timer_ticks};
+    use crate::sbi::timer::timer_ticks;
 
     let start = timer_ticks();
-    new_sleep_sem(alloc::sync::Arc::clone(&current), start + ticks);
-    SLEEP_SEM.up();
+    Manager::get().new_sleep(current.clone(), start + ticks);
     block();
 }

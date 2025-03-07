@@ -37,49 +37,10 @@ pub fn timer_ticks() -> i64 {
     TICKS.load(SeqCst)
 }
 
-// use crate::sync::Semaphore;
-
-// static mut SLEEP: alloc::vec::Vec<(isize, i64, Semaphore)> = alloc::vec::Vec::new();
-
-// /// Declares a new semaphore for a waiting thread.
-// pub fn new_sleep_sem(tid: isize, wakeup: i64) -> &'static Semaphore {
-//     unsafe {
-//         SLEEP.push((tid, wakeup, Semaphore::new(0)));
-//         &SLEEP.last().unwrap().2
-//     }
-// }
-use alloc::sync::Arc;
-use thread::{wake_up, Thread};
-
-static mut SLEEP: alloc::vec::Vec<(Arc<Thread>, i64)> = alloc::vec::Vec::new();
-
-/// Add a waiting thread.
-pub fn new_sleep_sem(me: Arc<Thread>, wakeup: i64) {
-    unsafe {
-        SLEEP.push((me, wakeup));
-    }
-}
-use thread::SLEEP_SEM;
 /// Increments timer ticks by 1 and sets the next timer interrupt.
 pub fn tick() {
     TICKS.fetch_add(1, SeqCst);
     next();
-    let curtick = TICKS.load(core::sync::atomic::Ordering::SeqCst);
-    // 在这里唤醒该唤醒的进程
-
-    SLEEP_SEM.down();
-    unsafe {
-        SLEEP.retain(|x| {
-            if x.1 == curtick {
-                //kprintln!("thread {} needs to be waken up", (*(x.0)).id());
-                wake_up(alloc::sync::Arc::clone(&(x.0)));
-                false
-            } else {
-                true
-            }
-        });
-    }
-    SLEEP_SEM.up();
 }
 
 /// Returns how many timer ticks elapsed since "then", which should be a
