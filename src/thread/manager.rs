@@ -64,10 +64,13 @@ impl Manager {
     }
 
     pub fn new_sleep(&self, thread: Arc<Thread>, wakeup: i64) {
+        let old = interrupt::set(false);
         self.sleep.lock().push((thread.clone(), wakeup));
+        interrupt::set(old);
     }
 
     pub fn wakeup(&self, curtick: i64) {
+        let old = interrupt::set(false);
         self.sleep.lock().retain(|x| {
             if x.1 <= curtick {
                 use thread::wake_up;
@@ -77,6 +80,7 @@ impl Manager {
                 true
             }
         });
+        interrupt::set(old);
     }
 
     pub(super) fn register(&self, thread: Arc<Thread>) {
