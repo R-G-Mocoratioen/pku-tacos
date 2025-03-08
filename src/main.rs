@@ -104,6 +104,7 @@ pub extern "C" fn main(hart_id: usize, dtb: usize) -> ! {
 
     // Init timer & external interrupt
     sbi::interrupt::init();
+    kprintln!("-------------------- AFTER INTERRUPT --------------------");
 
     #[cfg(feature = "test")]
     {

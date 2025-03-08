@@ -90,7 +90,7 @@ impl Schedule for Fcfs {
     }
 
     fn schedule(&mut self) -> Option<Arc<Thread>> {
-        kprintln!("calling fcfs::schedule in thread {}", current().name());
+        //kprintln!("calling fcfs::schedule in thread {}", current().name());
         let mut v: Vec<Arc<Thread>> = Vec::new();
         for p in 0..64 {
             for thread in &self.0[p] {
@@ -101,11 +101,11 @@ impl Schedule for Fcfs {
             self.0[p].clear();
         }
         for thread in &v {
-            kprintln!(
-                "scheduling: thread {} has priority {}",
-                thread.name(),
-                thread.priority()
-            );
+            // kprintln!(
+            //     "scheduling: thread {} has priority {}",
+            //     thread.name(),
+            //     thread.priority()
+            // );
             self.0[thread.priority() as usize].push_back(thread.clone());
             //self.0[0].push_back(thread.clone());
         }

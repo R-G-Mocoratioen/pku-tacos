@@ -44,7 +44,6 @@ pub fn set(level: bool) -> bool {
 
 pub fn init() {
     crate::sbi::timer::next();
-
     set(true);
 
     unsafe { register::sstatus::set_sie() };

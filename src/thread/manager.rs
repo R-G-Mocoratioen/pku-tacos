@@ -56,7 +56,6 @@ impl Manager {
             .priority(PRI_MIN)
             .build();
             manager.register(idle);
-            manager.register(initial);
 
             manager
         });
@@ -84,10 +83,17 @@ impl Manager {
         interrupt::set(old);
     }
 
+    /// Register a **new** thread
     pub(super) fn register(&self, thread: Arc<Thread>) {
         // Register it into the scheduler
         self.scheduler.lock().register(thread.clone());
 
+        // Store it in all list.
+        self.all.lock().push(thread.clone());
+    }
+
+    /// Make an old thread able to run, put it into all
+    pub(super) fn register_all(&self, thread: Arc<Thread>) {
         // Store it in all list.
         self.all.lock().push(thread.clone());
     }
@@ -103,6 +109,10 @@ impl Manager {
     ///
     /// 3. Get back from the other thread and restore the intr setting.
     pub fn schedule(&self) {
+        kprintln!(
+            "calling schedule function from thread {}",
+            self.current.lock().name()
+        );
         let old = interrupt::set(false);
 
         let next = self.scheduler.lock().schedule();
@@ -149,6 +159,10 @@ impl Manager {
         }
 
         interrupt::set(old);
+        kprintln!(
+            "BBBBBBBBBBBBBBBBBBBBBBBBBB interrupt is set to {} BBBBBBBBBBBBBBBBBBBBBBBBBB",
+            old
+        );
     }
 
     /// After context switch, now do some finishing touches. We release a thread's
@@ -169,8 +183,8 @@ impl Manager {
             }
             Status::Running => {
                 previous.set_status(Status::Ready);
-                // self.scheduler.lock().register(previous);
-                // 不能再重新 register 了
+                self.register_all(previous);
+                // 不能再重新 register 了，只需放回 All 里
             }
             Status::Blocked => {}
             Status::Ready => unreachable!(),

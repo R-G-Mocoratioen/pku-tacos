@@ -69,6 +69,7 @@ pub extern "C" fn trap_handler(frame: &mut Frame) {
         }
 
         Interrupt(SupervisorTimer) => {
+            kprintln!("--------------------- received interrupt ---------------------");
             sbi::timer::tick();
             unsafe { riscv::register::sstatus::set_sie() };
 
