@@ -45,7 +45,7 @@ impl Manager {
             let manager = Manager {
                 scheduler: Mutex::new(Scheduler::default()),
                 all: Mutex::new(Vec::from([initial.clone()])),
-                current: Mutex::new(initial),
+                current: Mutex::new(initial.clone()),
                 sleep: Mutex::new(Vec::new()),
             };
 
@@ -103,7 +103,7 @@ impl Manager {
     /// 3. Get back from the other thread and restore the intr setting.
     pub fn schedule(&self) {
         let old = interrupt::set(false);
-
+        kprintln!("{} {}", self.current.lock().name(), old);
         let next = self.scheduler.lock().schedule();
 
         // Make sure there's at least one thread runnable.

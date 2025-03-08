@@ -101,9 +101,13 @@ pub extern "C" fn main(hart_id: usize, dtb: usize) -> ! {
     device::plic::init(hart_id);
     #[cfg(feature = "debug")]
     kprintln!("Virtio inited.");
+    use thread::current;
+    kprintln!("current thread is {}", current().name());
 
     // Init timer & external interrupt
     sbi::interrupt::init();
+    use sbi::interrupt::get;
+    kprintln!("current thread has level {}", get());
 
     #[cfg(feature = "test")]
     {
