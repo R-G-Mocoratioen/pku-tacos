@@ -27,8 +27,9 @@ pub fn main() {
         Status::Ready,
         "Thread 2 should have just lowered its priority."
     );
-
+    kprintln!("----------------BEFORE SET_PRIORITY----------------");
     set_priority(PRI_DEFAULT - 2);
+    kprintln!("----------------AFTER SET_PRIORITY----------------");
 
     assert_eq!(
         child.status(),

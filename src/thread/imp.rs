@@ -71,6 +71,14 @@ impl Thread {
         *self.status.lock()
     }
 
+    pub fn priority(&self) -> u32 {
+        self.priority.load(SeqCst)
+    }
+
+    pub fn set_priority(&self, priority: u32) {
+        self.priority.store(priority, SeqCst)
+    }
+
     pub fn set_status(&self, status: Status) {
         *self.status.lock() = status;
     }

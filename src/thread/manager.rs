@@ -45,7 +45,7 @@ impl Manager {
             let manager = Manager {
                 scheduler: Mutex::new(Scheduler::default()),
                 all: Mutex::new(Vec::from([initial.clone()])),
-                current: Mutex::new(initial),
+                current: Mutex::new(initial.clone()),
                 sleep: Mutex::new(Vec::new()),
             };
 
@@ -56,6 +56,7 @@ impl Manager {
             .priority(PRI_MIN)
             .build();
             manager.register(idle);
+            manager.register(initial);
 
             manager
         });
@@ -117,31 +118,34 @@ impl Manager {
         );
 
         if let Some(next) = next {
-            assert_eq!(next.status(), Status::Ready);
-            assert!(!next.overflow(), "Next thread has overflowed its stack.");
-            next.set_status(Status::Running);
+            let cur = self.current.lock().clone();
+            if !Arc::ptr_eq(&cur, &next) {
+                assert_eq!(next.status(), Status::Ready);
+                assert!(!next.overflow(), "Next thread has overflowed its stack.");
+                next.set_status(Status::Running);
 
-            // Update the current thread to the next running thread
-            let previous = mem::replace(self.current.lock().deref_mut(), next);
-            #[cfg(feature = "debug")]
-            kprintln!("[THREAD] switch from {:?}", previous);
+                // Update the current thread to the next running thread
+                let previous = mem::replace(self.current.lock().deref_mut(), next);
+                #[cfg(feature = "debug")]
+                kprintln!("[THREAD] switch from {:?}", previous);
 
-            // Retrieve the raw pointers of two threads' context
-            let old_ctx = previous.context();
-            let new_ctx = self.current.lock().context();
+                // Retrieve the raw pointers of two threads' context
+                let old_ctx = previous.context();
+                let new_ctx = self.current.lock().context();
 
-            // WARNING: This function call may not return, so don't expect any value to be dropped.
+                // WARNING: This function call may not return, so don't expect any value to be dropped.
 
-            unsafe { switch::switch(Arc::into_raw(previous).cast(), old_ctx, new_ctx) }
+                unsafe { switch::switch(Arc::into_raw(previous).cast(), old_ctx, new_ctx) }
 
-            // Back to this location (which `ra` points to), indicating that another thread
-            // has yielded its control or simply exited. Also, it means now the running
-            // thread has been shceudled for more than one time, otherwise it would return
-            // to `kernel_thread_entry` (See `create` where the initial context is set).
-            //
-            // Then, we restore the interrupt setting, and back to where we were before the
-            // scheduling, usually inside a trap handler, a method of semaphore, or anywhere
-            // `schedule` was invoked.
+                // Back to this location (which `ra` points to), indicating that another thread
+                // has yielded its control or simply exited. Also, it means now the running
+                // thread has been shceudled for more than one time, otherwise it would return
+                // to `kernel_thread_entry` (See `create` where the initial context is set).
+                //
+                // Then, we restore the interrupt setting, and back to where we were before the
+                // scheduling, usually inside a trap handler, a method of semaphore, or anywhere
+                // `schedule` was invoked.
+            }
         }
 
         interrupt::set(old);
@@ -165,7 +169,8 @@ impl Manager {
             }
             Status::Running => {
                 previous.set_status(Status::Ready);
-                self.scheduler.lock().register(previous);
+                // self.scheduler.lock().register(previous);
+                // 不能再重新 register 了
             }
             Status::Blocked => {}
             Status::Ready => unreachable!(),

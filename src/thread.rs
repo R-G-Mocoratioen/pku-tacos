@@ -70,11 +70,20 @@ pub fn wake_up(thread: Arc<Thread>) {
 }
 
 /// (Lab1) Sets the current thread's priority to a given value
-pub fn set_priority(_priority: u32) {}
+pub fn set_priority(_priority: u32) {
+    let current = current();
+    current.set_priority(_priority);
+    kprintln!(
+        "set priority of {} to {}",
+        current.name(),
+        current.priority()
+    );
+    schedule()
+}
 
 /// (Lab1) Returns the current thread's effective priority.
 pub fn get_priority() -> u32 {
-    0
+    current().priority()
 }
 
 /// (Lab1) Make the current thread sleep for the given ticks.

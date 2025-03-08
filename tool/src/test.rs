@@ -199,7 +199,7 @@ fn check(case: &str, output: Wait, record: &mut Record) {
     };
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        println!("{}", stdout);
+        //println!("{}", stdout);
         // let stderr = String::from_utf8_lossy(&output.stderr);
         if let Some(()) = stdout
             .lines()
@@ -213,7 +213,7 @@ fn check(case: &str, output: Wait, record: &mut Record) {
                 println!("{}", "STDOUT:".bold().underline().italic().cyan());
                 let lines: Vec<&str> = stdout.lines().collect();
                 let len = lines.len();
-                for i in 0.max(len - 10)..len {
+                for i in 0..len {
                     println!("{}", lines[i]);
                 }
                 // Actually nonthing will be in STDERR.
