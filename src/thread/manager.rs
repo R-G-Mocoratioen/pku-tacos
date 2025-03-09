@@ -56,6 +56,7 @@ impl Manager {
             .priority(PRI_MIN)
             .build();
             manager.register(idle);
+            //manager.scheduler.lock().register(initial.clone());
 
             manager
         });
@@ -90,13 +91,14 @@ impl Manager {
 
         // Store it in all list.
         self.all.lock().push(thread.clone());
+        // TODO: needs to add schedule here
     }
 
-    /// Make an old thread able to run, put it into all
-    pub(super) fn register_all(&self, thread: Arc<Thread>) {
-        // Store it in all list.
-        self.all.lock().push(thread.clone());
-    }
+    // /// Make an old thread able to run, put it into all
+    // pub(super) fn register_all(&self, thread: Arc<Thread>) {
+    //     // Store it in all list.
+    //     self.all.lock().push(thread.clone());
+    // }
 
     /// Choose a `ready` thread to run if possible. If found, do as follows:
     ///
@@ -109,10 +111,10 @@ impl Manager {
     ///
     /// 3. Get back from the other thread and restore the intr setting.
     pub fn schedule(&self) {
-        kprintln!(
-            "calling schedule function from thread {}",
-            self.current.lock().name()
-        );
+        // kprintln!(
+        //     "calling schedule function from thread {}",
+        //     self.current.lock().name()
+        // );
         let old = interrupt::set(false);
 
         let next = self.scheduler.lock().schedule();
@@ -129,7 +131,7 @@ impl Manager {
 
         if let Some(next) = next {
             let cur = self.current.lock().clone();
-            if !Arc::ptr_eq(&cur, &next) {
+            if (cur.priority() <= next.priority() || cur.status() != Status::Running) {
                 assert_eq!(next.status(), Status::Ready);
                 assert!(!next.overflow(), "Next thread has overflowed its stack.");
                 next.set_status(Status::Running);
@@ -155,14 +157,17 @@ impl Manager {
                 // Then, we restore the interrupt setting, and back to where we were before the
                 // scheduling, usually inside a trap handler, a method of semaphore, or anywhere
                 // `schedule` was invoked.
+            } else {
+                kprintln!("still running {}", self.current.lock().name());
+                self.register(next);
             }
         }
 
         interrupt::set(old);
-        kprintln!(
-            "BBBBBBBBBBBBBBBBBBBBBBBBBB interrupt is set to {} BBBBBBBBBBBBBBBBBBBBBBBBBB",
-            old
-        );
+        // kprintln!(
+        //     "BBBBBBBBBBBBBBBBBBBBBBBBBB interrupt is set to {} BBBBBBBBBBBBBBBBBBBBBBBBBB",
+        //     old
+        // );
     }
 
     /// After context switch, now do some finishing touches. We release a thread's
@@ -183,7 +188,7 @@ impl Manager {
             }
             Status::Running => {
                 previous.set_status(Status::Ready);
-                self.register_all(previous);
+                self.register(previous);
                 // 不能再重新 register 了，只需放回 All 里
             }
             Status::Blocked => {}

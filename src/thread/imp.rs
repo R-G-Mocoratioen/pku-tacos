@@ -189,6 +189,8 @@ impl Builder {
         kprintln!("[THREAD] create {:?}", new_thread);
 
         Manager::get().register(new_thread.clone());
+        use thread::schedule;
+        schedule();
 
         // Off you go
         new_thread

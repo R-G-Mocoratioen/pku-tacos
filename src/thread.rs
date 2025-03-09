@@ -26,7 +26,7 @@ pub fn current() -> Arc<Thread> {
 
 /// Yield the control to another thread (if there's another one ready to run).
 pub fn schedule() {
-    kprintln!("called this schedule!!!!!!!!!!!!!!!!");
+    //kprintln!("called this schedule!!!!!!!!!!!!!!!!");
     Manager::get().schedule()
 }
 
@@ -67,18 +67,18 @@ pub fn wake_up(thread: Arc<Thread>) {
     #[cfg(feature = "debug")]
     kprintln!("[THREAD] Wake up {:?}", thread);
 
-    Manager::get().register_all(thread);
+    Manager::get().register(thread);
 }
 
 /// (Lab1) Sets the current thread's priority to a given value
 pub fn set_priority(_priority: u32) {
     let current = current();
     current.set_priority(_priority);
-    kprintln!(
-        "set priority of {} to {}",
-        current.name(),
-        current.priority()
-    );
+    // kprintln!(
+    //     "set priority of {} to {}",
+    //     current.name(),
+    //     current.priority()
+    // );
     schedule()
 }
 
