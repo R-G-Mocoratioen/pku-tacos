@@ -2,13 +2,15 @@
 
 use alloc::boxed::Box;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::arch::global_asm;
+use core::cmp::max;
 use core::fmt::{self, Debug};
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
-use crate::thread::Manager;
+use crate::thread::{current, Manager};
 use crate::userproc::UserProc;
 
 pub const PRI_DEFAULT: u32 = 31;
@@ -30,7 +32,10 @@ pub struct Thread {
     stack: usize,
     status: Mutex<Status>,
     context: Mutex<Context>,
+    waiters: Mutex<Vec<Arc<Thread>>>,
+    waiting: Mutex<Option<Arc<Thread>>>,
     pub priority: AtomicU32,
+    pub effective_priority: AtomicU32,
     pub userproc: Option<UserProc>,
     pub pagetable: Option<Mutex<PageTable>>,
 }
@@ -54,8 +59,11 @@ impl Thread {
             status: Mutex::new(Status::Ready),
             context: Mutex::new(Context::new(stack, entry)),
             priority: AtomicU32::new(priority),
+            effective_priority: AtomicU32::new(priority),
             userproc,
             pagetable: pagetable.map(Mutex::new),
+            waiters: Mutex::new(Vec::new()),
+            waiting: Mutex::new(None),
         }
     }
 
@@ -72,11 +80,45 @@ impl Thread {
     }
 
     pub fn priority(&self) -> u32 {
-        self.priority.load(SeqCst)
+        self.effective_priority.load(SeqCst)
+    }
+
+    pub fn update_effective_priority(&self) {
+        let v = self.waiters.lock();
+        self.effective_priority
+            .store(self.priority.load(SeqCst), SeqCst);
+        for sons in v.iter() {
+            self.effective_priority.store(
+                max(self.effective_priority.load(SeqCst), sons.priority()),
+                SeqCst,
+            );
+        }
+        let fa = self.waiting.lock();
+        if fa.is_some() {
+            fa.clone().unwrap().update_effective_priority();
+        }
     }
 
     pub fn set_priority(&self, priority: u32) {
-        self.priority.store(priority, SeqCst)
+        self.priority.store(priority, SeqCst);
+        self.update_effective_priority()
+    }
+
+    pub fn waitfor(&self, fa: Arc<Thread>) {
+        assert!(self.waiting.lock().is_none());
+        *self.waiting.lock() = Some(fa.clone());
+        fa.waiters.lock().push(current().clone());
+        fa.update_effective_priority();
+    }
+
+    pub fn donewait(&self) {
+        if self.waiting.lock().is_none() {
+            return;
+        }
+        let fa = self.waiting.lock().take().unwrap();
+        let cur = current().clone();
+        fa.waiters.lock().retain(|t| !Arc::ptr_eq(t, &cur));
+        fa.update_effective_priority();
     }
 
     pub fn set_status(&self, status: Status) {

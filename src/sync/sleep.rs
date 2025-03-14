@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use core::cell::RefCell;
 
 use crate::sync::{Lock, Semaphore};
-use crate::thread::{self, Thread};
+use crate::thread::{self, current, Thread};
 
 /// Sleep lock. Uses [`Semaphore`] under the hood.
 #[derive(Clone)]
@@ -22,7 +22,18 @@ impl Default for Sleep {
 
 impl Lock for Sleep {
     fn acquire(&self) {
+        // 只需要改这个函数
+        // 1. 把我的父亲设为 holder
+        let holder = self.holder.borrow().as_ref().cloned();
+        if holder.is_some() {
+            current().waitfor(holder.clone().unwrap());
+        }
         self.inner.down();
+        if holder.is_some() {
+            current().donewait();
+        }
+
+        // 2. 把我的父亲设为 none
         self.holder.borrow_mut().replace(thread::current());
     }
 
