@@ -2,7 +2,7 @@ use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
-use crate::thread::{current, Schedule, Status, Thread};
+use crate::thread::{Schedule, Thread};
 
 /// FIFO scheduler.
 
@@ -10,83 +10,23 @@ pub struct Fcfs([VecDeque<Arc<Thread>>; 64]);
 
 impl Default for Fcfs {
     fn default() -> Self {
-        Self([
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-        ])
+        Self([(); 64].map(|_| VecDeque::new()))
     }
 }
 
 impl Schedule for Fcfs {
     fn register(&mut self, thread: Arc<Thread>) {
-        kprintln!(
-            "adding thread {} into the queue with priority {}",
-            thread.name(),
-            thread.priority()
-        );
+        // kprintln!(
+        //     "adding thread {} into the queue with priority {} and id {}",
+        //     thread.name(),
+        //     thread.priority(),
+        //     thread.id()
+        // );
         self.0[thread.priority() as usize].push_back(thread)
+    }
+
+    fn put_back(&mut self, thread: Arc<Thread>) {
+        self.0[thread.priority() as usize].push_front(thread)
     }
 
     fn schedule(&mut self) -> Option<Arc<Thread>> {
@@ -99,16 +39,16 @@ impl Schedule for Fcfs {
             self.0[p].clear();
         }
         for thread in &v {
-            kprintln!(
-                "scheduling 1: thread {} has priority {}",
-                thread.name(),
-                thread.priority()
-            );
+            // kprintln!(
+            //     "scheduling 1: thread {} has priority {}",
+            //     thread.name(),
+            //     thread.priority()
+            // );
             self.0[thread.priority() as usize].push_back(thread.clone());
         }
         for p in (0..64).rev() {
             if self.0[p].len() > 0 {
-                kprintln!("chosen");
+                //kprintln!("chosen");
                 return self.0[p].pop_front();
             }
             // let back = self.0[p].back();
@@ -124,7 +64,7 @@ impl Schedule for Fcfs {
             //     // return self.0[p].pop_back();
             // }
         }
-        kprintln!("scheduling: no thread to run");
+        //kprintln!("scheduling: no thread to run");
         None
     }
 }

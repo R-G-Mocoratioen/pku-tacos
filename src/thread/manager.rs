@@ -111,11 +111,13 @@ impl Manager {
     ///
     /// 3. Get back from the other thread and restore the intr setting.
     pub fn schedule(&self) {
-        // kprintln!(
-        //     "calling schedule function from thread {}",
-        //     self.current.lock().name()
-        // );
         let old = interrupt::set(false);
+        // kprintln!(
+        //     "calling schedule function from thread {} with priority {} and id {}",
+        //     ttt.name(),
+        //     ttt.priority(),
+        //     ttt.id()
+        // );
 
         let next = self.scheduler.lock().schedule();
 
@@ -131,7 +133,8 @@ impl Manager {
 
         if let Some(next) = next {
             let cur = self.current.lock().clone();
-            if (cur.priority() <= next.priority() || cur.status() != Status::Running) {
+            if cur.priority() <= next.priority() || cur.status() != Status::Running {
+                //kprintln!("switch to id {}", next.id());
                 assert_eq!(next.status(), Status::Ready);
                 assert!(!next.overflow(), "Next thread has overflowed its stack.");
                 next.set_status(Status::Running);
@@ -158,8 +161,12 @@ impl Manager {
                 // scheduling, usually inside a trap handler, a method of semaphore, or anywhere
                 // `schedule` was invoked.
             } else {
-                kprintln!("still running {}", self.current.lock().name());
-                self.register(next);
+                // kprintln!(
+                //     "still running {} with priority {}",
+                //     cur.name(),
+                //     cur.priority()
+                // );
+                self.scheduler.lock().put_back(next.clone());
             }
         }
 
@@ -189,9 +196,10 @@ impl Manager {
             Status::Running => {
                 previous.set_status(Status::Ready);
                 self.register(previous);
-                // 不能再重新 register 了，只需放回 All 里
             }
-            Status::Blocked => {}
+            Status::Blocked => {
+                //kprintln!("thread {} is blocked", previous.id());
+            }
             Status::Ready => unreachable!(),
         }
 

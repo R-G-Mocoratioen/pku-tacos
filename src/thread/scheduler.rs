@@ -23,6 +23,9 @@ pub trait Schedule: Default {
     /// becomes a candidate of [`schedule`](Schedule::schedule).
     fn register(&mut self, thread: Arc<Thread>);
 
+    /// Put back a thread with low priority.
+    fn put_back(&mut self, thread: Arc<Thread>);
+
     /// Choose the next thread to run. `None` if scheduler decides to keep running
     /// the current thread.
     fn schedule(&mut self) -> Option<Arc<Thread>>;

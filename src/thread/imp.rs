@@ -187,7 +187,12 @@ impl Builder {
 
         #[cfg(feature = "debug")]
         kprintln!("[THREAD] create {:?}", new_thread);
-
+        kprintln!(
+            "spawning thread {} with priority {} and id {}",
+            new_thread.name(),
+            new_thread.priority(),
+            new_thread.id()
+        );
         Manager::get().register(new_thread.clone());
         use thread::schedule;
         schedule();

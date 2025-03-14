@@ -42,13 +42,33 @@
 //! ```
 //!
 
+use crate::sync::{Lock, MutexGuard, Semaphore};
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use core::cell::RefCell;
+use core::cmp::Ordering;
+use thread::Thread;
 
-use crate::sync::{Lock, MutexGuard, Semaphore};
+#[derive(Clone)]
+struct ArcSemaThread(Arc<Semaphore>, Arc<Thread>);
+impl Ord for ArcSemaThread {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.1.priority().cmp(&other.1.priority())
+    }
+}
+impl PartialOrd for ArcSemaThread {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl PartialEq for ArcSemaThread {
+    fn eq(&self, other: &Self) -> bool {
+        self.1.priority() == other.1.priority()
+    }
+}
 
-pub struct Condvar(RefCell<VecDeque<Arc<Semaphore>>>);
+impl Eq for ArcSemaThread {}
+pub struct Condvar(RefCell<VecDeque<ArcSemaThread>>);
 
 unsafe impl Sync for Condvar {}
 unsafe impl Send for Condvar {}
@@ -60,7 +80,10 @@ impl Condvar {
 
     pub fn wait<T, L: Lock>(&self, guard: &mut MutexGuard<'_, T, L>) {
         let sema = Arc::new(Semaphore::new(0));
-        self.0.borrow_mut().push_front(sema.clone());
+        use thread::current;
+        self.0
+            .borrow_mut()
+            .push_back(ArcSemaThread(sema.clone(), current().clone()));
 
         guard.release();
         sema.down();
@@ -69,14 +92,26 @@ impl Condvar {
 
     /// Wake up one thread from the waiting list
     pub fn notify_one(&self) {
-        if let Some(sema) = self.0.borrow_mut().pop_back() {
-            sema.up();
+        let mut binding = self.0.borrow_mut();
+        let slice = binding.make_contiguous();
+        slice.sort();
+
+        if let Some(sema) = binding.pop_back() {
+            sema.0.up();
         }
     }
 
     /// Wake up all waiting threads
     pub fn notify_all(&self) {
-        self.0.borrow().iter().for_each(|s| s.up());
-        self.0.borrow_mut().clear();
+        // kprintln!("calls notify all");
+        // self.0.borrow().iter().for_each(|s| s.up());
+        // // TODO: 按照顺序最大的来
+        // self.0.borrow_mut().clear();
+        let mut binding = self.0.borrow_mut();
+        let slice = binding.make_contiguous();
+        slice.sort();
+        slice.reverse();
+        binding.iter().for_each(|s| s.0.up());
+        binding.clear();
     }
 }
