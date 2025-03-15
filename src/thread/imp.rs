@@ -105,20 +105,24 @@ impl Thread {
     }
 
     pub fn waitfor(&self, fa: Arc<Thread>) {
+        let old = interrupt::set(false);
         assert!(self.waiting.lock().is_none());
         *self.waiting.lock() = Some(fa.clone());
         fa.waiters.lock().push(current().clone());
         fa.update_effective_priority();
+        interrupt::set(old);
     }
 
     pub fn donewait(&self) {
         if self.waiting.lock().is_none() {
             return;
         }
+        let old = interrupt::set(false);
         let fa = self.waiting.lock().take().unwrap();
         let cur = current().clone();
         fa.waiters.lock().retain(|t| !Arc::ptr_eq(t, &cur));
         fa.update_effective_priority();
+        interrupt::set(old);
     }
 
     pub fn set_status(&self, status: Status) {

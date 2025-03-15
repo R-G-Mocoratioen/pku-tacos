@@ -72,6 +72,8 @@ pub fn wake_up(thread: Arc<Thread>) {
 
 /// (Lab1) Sets the current thread's priority to a given value
 pub fn set_priority(_priority: u32) {
+    use crate::sbi::interrupt;
+    let old = interrupt::set(false);
     let current = current();
     current.set_priority(_priority);
     // kprintln!(
@@ -79,7 +81,8 @@ pub fn set_priority(_priority: u32) {
     //     current.name(),
     //     current.priority()
     // );
-    schedule()
+    schedule();
+    interrupt::set(old);
 }
 
 /// (Lab1) Returns the current thread's effective priority.
